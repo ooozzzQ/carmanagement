@@ -32,7 +32,9 @@ header {
     width: 100%;
 }
 .btnbox Button {
-    margin-left: 200px;
+    margin: 0 100px 20px;
     width: 200px;
-
+}
+.ant-table-wrapper {
+    padding: 0 30px;
 }
