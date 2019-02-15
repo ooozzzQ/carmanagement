@@ -59,33 +59,43 @@ class EditableTable extends React.Component {
     this.columns = [{
       title: '日期',
       dataIndex: 'date',
-      width: '20%',
+      width: '10%',
       render: (text, record, index) => this.renderColumns(this.state.data, index, 'date', text),
     }, {
       title: '车主姓名',
       dataIndex: 'username',
-      width: '20%',
+      width: '10%',
       render: (text, record, index) => this.renderColumns(this.state.data, index, 'username', text),
     }, {
       title: '车主地址',
       dataIndex: 'address',
-      width: '30%',
+      width: '15%',
       render: (text, record, index) => this.renderColumns(this.state.data, index, 'address', text),
     }, {
       title: '联系电话',
       dataIndex: 'tel',
-      width: '20%',
+      width: '12%',
       render: (text, record, index) => this.renderColumns(this.state.data, index, 'tel', text),
     }, {
       title: '发动机型号',
-      dataIndex: 'tel',
-      width: '20%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'tel', text),
+      dataIndex: 'motor',
+      width: '13%',
+      render: (text, record, index) => this.renderColumns(this.state.data, index, 'motor', text),
     }, {
-      title: '车主电话',
-      dataIndex: 'tel',
-      width: '20%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'tel', text),
+      title: 'OB',
+      dataIndex: 'obposition',
+      width: '10%',
+      render: (text, record, index) => this.renderColumns(this.state.data, index, 'obposition', text),
+    }, {
+      title: '车辆品牌',
+      dataIndex: 'brand',
+      width: '10%',
+      render: (text, record, index) => this.renderColumns(this.state.data, index, 'brand', text),
+    }, {
+      title: '大架号位置',
+      dataIndex: 'bignum',
+      width: '10%',
+      render: (text, record, index) => this.renderColumns(this.state.data, index, 'brand', text),
     }, {
       title: '操作',
       dataIndex: 'operation',
@@ -132,6 +142,22 @@ class EditableTable extends React.Component {
           editable: false,
           value: '132xxxxxxxx',
         },
+        motor: {
+          editable: false,
+          value: '132xxxxxxxx',
+        },
+        obposition: {
+          editable: false,
+          value: '132xxxxxxxx',
+        },
+        brand: {
+          editable: false,
+          value: '132xxxxxxxx',
+        },
+        bignum: {
+          editable: false,
+          value: '132xxxxxxxx',
+        }
       },{
         key: '1',
         username: {
@@ -150,6 +176,22 @@ class EditableTable extends React.Component {
           editable: false,
           value: '132xxxxxxxx',
         },
+        motor: {
+          editable: false,
+          value: '132xxxxxxxx',
+        },
+        obposition: {
+          editable: false,
+          value: '132xxxxxxxx',
+        },
+        brand: {
+          editable: false,
+          value: '132xxxxxxxx',
+        },
+        bignum: {
+          editable: false,
+          value: '132xxxxxxxx',
+        }
       }],
     };
   }
@@ -199,20 +241,18 @@ class EditableTable extends React.Component {
   // 取消编辑并退出的逻辑
   editCancel(index, type) {
     const { data } = this.state;
+    console.log(data)
+    const datastring = data.join()
+    console.log(datastring);
+    // const olddata = JSON.parse
+    // console.dir(olddata)
     Object.keys(data[index]).forEach((item) => {
       if (data[index][item] && typeof data[index][item].editable !== 'undefined') {
-        data[index][item].editable = true;
-        data[index][item].status = type;
+        data[index][item].editable = false;
+        // data[index][item].value = olddata[index][item].value;
       }
     });
-    this.setState({ data }, () => {
-      Object.keys(data[index]).forEach((item) => {
-        if (data[index][item] && typeof data[index][item].editable !== 'undefined') {
-          console.log(data[index][item].status)
-          delete data[index][item].status;
-        }
-      });
-    });
+    this.setState({ data });
   }
   render() {
     const { data } = this.state;
@@ -228,25 +268,36 @@ class EditableTable extends React.Component {
   }
 }
 
-
 class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      date:new Date()
+    }
+  }
+  savedate(){
+    let form = document.getElementById("form");
+    console.log(form);
+    let formdata = new FormData(form);
+    console.log(formdata.get("date"))
+  }  
   render() {
     return (
       <div className="App">
         <header>御通车检信息管理</header>
         <div className="infobox">
           <h2 className="infotitle">用户信息存储</h2>
-          <Form>
-            <div className="info"><label>车主姓名：</label><Input /></div>
-            <div className="info"><label>联系电话：</label><Input /></div>
-            <div className="info"><label>车主地址：</label><Input /></div>
-            <div className="info"><label>检测日期：</label><Input /></div>
-            <div className="info"><label>车辆品牌：</label><Input /></div>
-            <div className="info"><label>发动机型号：</label><Input /></div>
-            <div className="info"><label>大架号位置：</label><Input /></div>
-            <div className="info"><label>OB位置：</label><Input /></div>
+          <Form id="form">
+            <div className="info"><label>车主姓名：</label><Input name="username" /></div>
+            <div className="info"><label>联系电话：</label><Input name="tel"/></div>
+            <div className="info"><label>车主地址：</label><Input name="address"/></div>
+            <div className="info"><label>检测日期：</label><Input name="date" defaultValue={this.state.date.toLocaleDateString()} /></div>
+            <div className="info"><label>车辆品牌：</label><Input  name="brand"/></div>
+            <div className="info"><label>发动机型号：</label><Input name="motor"/></div>
+            <div className="info"><label>大架号位置：</label><Input name="bignum"/></div>
+            <div className="info"><label>OB位置：</label><Input name="obposition" /></div>
             <div className="btnbox">
-              <Button type="primary">保存</Button>
+              <Button type="primary" onClick={this.savedate}>保存</Button>
               <Button type="danger" icon="search">搜索</Button>
             </div>
           </Form>
