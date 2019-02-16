@@ -1,8 +1,9 @@
 import React, { Component } from 'react';
-import { Input, Form, Button, Table, Popconfirm} from "antd";
+import { Input, Form, Button, Table, DatePicker} from "antd";
 import './App.css';
 class EditableCell extends React.Component {
   state = {
+    item:this.props.item,
     value: this.props.value,
     editable: this.props.editable || false,
   }
@@ -29,9 +30,10 @@ class EditableCell extends React.Component {
   handleChange(e) {
     const value = e.target.value;
     this.setState({ value });
+    return {value}
   }
   render() {
-    const { value, editable } = this.state;
+    const { value, editable} = this.state;
     return (
       <div>
         {
@@ -95,7 +97,7 @@ class EditableTable extends React.Component {
       title: '大架号位置',
       dataIndex: 'bignum',
       width: '10%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'brand', text),
+      render: (text, record, index) => this.renderColumns(this.state.data, index, 'bignum', text),
     }, {
       title: '操作',
       dataIndex: 'operation',
@@ -107,11 +109,8 @@ class EditableTable extends React.Component {
             {
               editable ?
                 <span>
-                  <Popconfirm title="确定修改?"  okText="保存" cancelText="继续编辑" onConfirm={() => this.editDone(index, '保存修改')}>
-                    <a>保存</a>
-                  </Popconfirm>
-                  {/* 这里需要改一下逻辑，修改为点击取消，退出编辑，还原成之前的数据 */}
-                  <a onClick={() => this.editCancel(index, '取消修改')}>取消</a>
+                  <a onClick={() => this.editDone(index, 'save')}>保存</a>
+                  <a onClick={() => this.editDone(index, 'cancel')}>取消</a>
                 </span>
                 :
                 <span>
@@ -232,27 +231,11 @@ class EditableTable extends React.Component {
     this.setState({ data }, () => {
       Object.keys(data[index]).forEach((item) => {
         if (data[index][item] && typeof data[index][item].editable !== 'undefined') {
-          console.log(data[index][item].status)
           delete data[index][item].status;
         }
       });
+      // console.log('data[index]', data[index]);
     });
-  }
-  // 取消编辑并退出的逻辑
-  editCancel(index, type) {
-    const { data } = this.state;
-    console.log(data)
-    const datastring = data.join()
-    console.log(datastring);
-    // const olddata = JSON.parse
-    // console.dir(olddata)
-    Object.keys(data[index]).forEach((item) => {
-      if (data[index][item] && typeof data[index][item].editable !== 'undefined') {
-        data[index][item].editable = false;
-        // data[index][item].value = olddata[index][item].value;
-      }
-    });
-    this.setState({ data });
   }
   render() {
     const { data } = this.state;
@@ -277,9 +260,7 @@ class App extends Component {
   }
   savedate(){
     let form = document.getElementById("form");
-    console.log(form);
     let formdata = new FormData(form);
-    console.log(formdata.get("date"))
   }  
   render() {
     return (
@@ -291,7 +272,7 @@ class App extends Component {
             <div className="info"><label>车主姓名：</label><Input name="username" /></div>
             <div className="info"><label>联系电话：</label><Input name="tel"/></div>
             <div className="info"><label>车主地址：</label><Input name="address"/></div>
-            <div className="info"><label>检测日期：</label><Input name="date" defaultValue={this.state.date.toLocaleDateString()} /></div>
+            <div className="info"><label>检测日期：</label><DatePicker placeholder="选择日期" name="date" /></div>            
             <div className="info"><label>车辆品牌：</label><Input  name="brand"/></div>
             <div className="info"><label>发动机型号：</label><Input name="motor"/></div>
             <div className="info"><label>大架号位置：</label><Input name="bignum"/></div>

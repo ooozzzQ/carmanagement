@@ -25,11 +25,18 @@ header {
 .ant-input {
     width: 70%;
 }
+.ant-calendar-picker {
+    width: 70%;
+}
+.ant-calendar-picker .ant-input {
+    width: 100%;
+}
 .ant-btn {
     width: 200px;
 }
 .btnbox {
     width: 100%;
+    text-align: center;
 }
 .btnbox Button {
     margin: 0 100px 20px;
