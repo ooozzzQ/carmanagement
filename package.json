@@ -2,17 +2,24 @@
   "name": "carmanagement",
   "version": "0.1.0",
   "private": true,
+  "main": "main.js",
   "dependencies": {
     "antd": "^3.13.2",
+    "electron": "^4.0.5",
+    "moment": "^2.24.0",
     "react": "^16.8.1",
     "react-dom": "^16.8.1",
-    "react-scripts": "2.1.5"
+    "react-scripts": "2.1.5",
+    "sqlite3": "^4.0.6"
   },
+  "devDependencies": {},
   "scripts": {
-    "start": "react-scripts start --open",
+    "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "union": "react-scripts build && electron .",
+    "electron": "electron ."
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -22,5 +29,6 @@
     "not dead",
     "not ie <= 11",
     "not op_mini all"
-  ]
+  ],
+  "homepage": "."
 }

@@ -1,12 +1,17 @@
 import React, { Component } from 'react';
-import { Input, Form, Button, Table, DatePicker} from "antd";
+import { Input, Button, Table, DatePicker, Modal, message} from "antd";
+import moment from 'moment';
 import './App.css';
+
+const { ipcRenderer } = window.electron;
+
 class EditableCell extends React.Component {
   state = {
     item:this.props.item,
     value: this.props.value,
     editable: this.props.editable || false,
   }
+
   componentWillReceiveProps(nextProps) {
     if (nextProps.editable !== this.state.editable) {
       this.setState({ editable: nextProps.editable });
@@ -23,15 +28,22 @@ class EditableCell extends React.Component {
       }
     }
   }
+
   shouldComponentUpdate(nextProps, nextState) {
     return nextProps.editable !== this.state.editable ||
            nextState.value !== this.state.value;
   }
-  handleChange(e) {
+
+  handleChange = (e) => {
     const value = e.target.value;
     this.setState({ value });
     return {value}
   }
+
+  handleDateChange = (value) => {
+    this.setState({ value });
+  }
+
   render() {
     const { value, editable} = this.state;
     return (
@@ -39,14 +51,18 @@ class EditableCell extends React.Component {
         {
           editable ?
             <div>
-              <Input
+              {
+              this.props.isDate
+              ? <DatePicker placeholder="选择日期" value={ value ? moment(value) : null } onChange={this.handleDateChange} />
+              : <Input
                 value={value}
                 onChange={e => this.handleChange(e)}
               />
+              }
             </div>
             :
             <div className="editable-row-text">
-              {value.toString() || ' '}
+              { value ? (this.props.isDate ? moment(value).format('YYYY-MM-DD') : value.toString()) : '-'  }
             </div>
         }
       </div>
@@ -57,143 +73,83 @@ class EditableCell extends React.Component {
 class EditableTable extends React.Component {
   constructor(props) {
     super(props);
-    // 表格的行
-    this.columns = [{
-      title: '日期',
-      dataIndex: 'date',
-      width: '10%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'date', text),
-    }, {
-      title: '车主姓名',
-      dataIndex: 'username',
-      width: '10%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'username', text),
-    }, {
-      title: '车主地址',
-      dataIndex: 'address',
-      width: '15%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'address', text),
-    }, {
-      title: '联系电话',
-      dataIndex: 'tel',
-      width: '12%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'tel', text),
-    }, {
-      title: '发动机型号',
-      dataIndex: 'motor',
-      width: '13%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'motor', text),
-    }, {
-      title: 'OB',
-      dataIndex: 'obposition',
-      width: '10%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'obposition', text),
-    }, {
-      title: '车辆品牌',
-      dataIndex: 'brand',
-      width: '10%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'brand', text),
-    }, {
-      title: '大架号位置',
-      dataIndex: 'bignum',
-      width: '10%',
-      render: (text, record, index) => this.renderColumns(this.state.data, index, 'bignum', text),
-    }, {
-      title: '操作',
-      dataIndex: 'operation',
-      width: '10%',
-      render: (text, record, index) => {
-        const { editable } = this.state.data[index].username;
-        return (
-          <div className="editable-row-operations">
-            {
-              editable ?
-                <span>
-                  <a onClick={() => this.editDone(index, 'save')}>保存</a>
-                  <a onClick={() => this.editDone(index, 'cancel')}>取消</a>
-                </span>
-                :
-                <span>
-                  <a onClick={() => this.edit(index)}>修改</a>
-                </span>
-            }
-          </div>
-        );
-      },
-    }];
-    // 后台返回的数据
     this.state = {
-      data: [{
-        key: '0',
-        username: {
-          editable: false,
-          value: 'wang',
-        },
-        date: {
-          editable: false,
-          value: '2019-09-10',
-        },
-        address: {
-          editable: false,
-          value: 'London, Park Lane no. 0',
-        },
-        tel: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        motor: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        obposition: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        brand: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        bignum: {
-          editable: false,
-          value: '132xxxxxxxx',
-        }
-      },{
-        key: '1',
-        username: {
-          editable: false,
-          value: 'wang',
-        },
-        date: {
-          editable: false,
-          value: '2019-09-10',
-        },
-        address: {
-          editable: false,
-          value: 'London, Park Lane no. 0',
-        },
-        tel: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        motor: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        obposition: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        brand: {
-          editable: false,
-          value: '132xxxxxxxx',
-        },
-        bignum: {
-          editable: false,
-          value: '132xxxxxxxx',
-        }
-      }],
-    };
+      data: props.data,
+    }
   }
+
+  componentWillReceiveProps(nextProps) {
+    this.setState({
+      data: nextProps.data,
+    })
+  }
+
+  renderColumnsFn = (keyword) => (text, record, index) => this.renderColumns(this.state.data, index, keyword, text);
+
+  columns = [{
+    title: '检测日期',
+    dataIndex: 'date',
+    width: '10%',
+    render: this.renderColumnsFn('date'),
+  }, {
+    title: '车主姓名',
+    dataIndex: 'username',
+    width: '10%',
+    render: this.renderColumnsFn('username'),
+  }, {
+    title: '车主地址',
+    dataIndex: 'address',
+    width: '15%',
+    render: this.renderColumnsFn('address'),
+  }, {
+    title: '联系电话',
+    dataIndex: 'tel',
+    width: '12%',
+    render: this.renderColumnsFn('tel'),
+  }, {
+    title: '发动机型号',
+    dataIndex: 'motor',
+    width: '13%',
+    render: this.renderColumnsFn('motor'),
+  }, {
+    title: 'OB',
+    dataIndex: 'obposition',
+    width: '10%',
+    render: this.renderColumnsFn('obposition'),
+  }, {
+    title: '车辆品牌',
+    dataIndex: 'brand',
+    width: '10%',
+    render: this.renderColumnsFn('brand'),
+  }, {
+    title: '大架号位置',
+    dataIndex: 'bignum',
+    width: '10%',
+    render: this.renderColumnsFn('bignum'),
+  }, {
+    title: '操作',
+    dataIndex: 'operation',
+    width: '10%',
+    render: (text, record, index) => {
+      const { editable } = this.state.data[index].username;
+      return (
+        <div className="editable-row-operations">
+          {
+            editable ?
+              <span>
+                <a onClick={() => this.editDone(index, 'save')}>保存</a>
+                <a onClick={() => this.editDone(index, 'cancel')}>取消</a>
+              </span>
+              :
+              <span>
+                <a onClick={() => this.edit(index)}>修改</a>
+              </span>
+          }
+        </div>
+      );
+    },
+  }];
+
   renderColumns(data, index, key, text) {
     const { editable, status } = data[index][key];
     if (typeof editable === 'undefined') {
@@ -204,13 +160,16 @@ class EditableTable extends React.Component {
       value={text}
       onChange={value => this.handleChange(key, index, value)}
       status={status}
+      isDate={key === 'date'}
     />);
   }
+
   handleChange(key, index, value) {
     const { data } = this.state;
     data[index][key].value = value;
     this.setState({ data });
   }
+
   edit(index) {
     const { data } = this.state;
     Object.keys(data[index]).forEach((item) => {
@@ -220,6 +179,7 @@ class EditableTable extends React.Component {
     });
     this.setState({ data });
   }
+
   editDone(index, type) {
     const { data } = this.state;
     Object.keys(data[index]).forEach((item) => {
@@ -234,9 +194,9 @@ class EditableTable extends React.Component {
           delete data[index][item].status;
         }
       });
-      // console.log('data[index]', data[index]);
     });
   }
+
   render() {
     const { data } = this.state;
     const dataSource = data.map((item) => {
@@ -247,45 +207,135 @@ class EditableTable extends React.Component {
       return obj;
     });
     const columns = this.columns;
-    return <Table bordered dataSource={dataSource} columns={columns} />;
+    return <Table {...this.props} bordered dataSource={dataSource} columns={columns} />;
   }
 }
 
 class App extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      date:new Date()
+  pageDefault = { cur: 1, size: 10, total: 0 }
+
+  state = {
+    data: [],
+    page: { ...this.pageDefault },
+    dateValue: null,
+  }
+
+  dataDeform(data = []) {    
+    return data.map((item) => {
+      const res = {};
+      for (const key in item) {
+        if (key === 'id') {
+          res.key = item[key];
+        } else {
+          res[key] = {
+            editable: false,
+            value: item[key],
+          }
+        }
+      }
+      return res;
+    });
+  }
+
+  componentDidMount() {
+    if (ipcRenderer) {
+      // 发送数据到主进程
+      ipcRenderer.send('query-data', { page: this.state.page });
+
+      // 接受主进程返回数据
+      ipcRenderer.on('save-data', (event, arg) => {
+        message.success('保存成功');
+        ipcRenderer.send('query-data', { page: this.state.page });
+      });
+
+      // 接受主进程返回数据
+      ipcRenderer.on('query-data', (event, arg) => {
+          if (arg) {
+            this.setState({
+              data: this.dataDeform(arg.data),
+              page: arg.page,
+            })
+          } else {
+            this.setState({
+              data: [],
+              page: { ...this.pageDefault }
+            })
+          }
+      });
     }
   }
-  savedate(){
-    let form = document.getElementById("form");
-    let formdata = new FormData(form);
-  }  
+
+  getFormData() {
+    const form = document.getElementById("form");
+    const formdata = new FormData(form);
+    const data = {};
+    for (const key of formdata.keys()) {
+      data[key] = formdata.get(key);
+    }
+    return data;
+  }
+
+  onSave = () => {
+    const data = this.getFormData();
+    if (ipcRenderer) {
+      // 发送数据到主进程
+      ipcRenderer.send('save-data', data);
+    }
+  }
+
+  onSearch = () => {
+    this.search(this.pageDefault);
+  }
+
+  search = (page) => {
+    const data = this.getFormData();
+    if (ipcRenderer) {
+            // 发送数据到主进程
+      ipcRenderer.send('query-data', { page: page ? page : this.pageDefault, data });
+    }
+  }
+
+  onTabeChange = (pagination) => {
+    const { page } = this.state;
+    page.cur = pagination.current;
+    this.setState({
+      page,
+    })
+    this.search(page);
+  }
+
+  onDateChange = (moment, dateString) => {
+    this.setState({
+      dateValue: moment,
+    });
+  }
+
   render() {
+    const { data, page, dateValue } = this.state;
+
     return (
       <div className="App">
         <header>御通车检信息管理</header>
         <div className="infobox">
-          <h2 className="infotitle">用户信息存储</h2>
-          <Form id="form">
+          <h2 className="infotitle">用户信息搜索/存储</h2>
+          <form id="form">
             <div className="info"><label>车主姓名：</label><Input name="username" /></div>
             <div className="info"><label>联系电话：</label><Input name="tel"/></div>
             <div className="info"><label>车主地址：</label><Input name="address"/></div>
-            <div className="info"><label>检测日期：</label><DatePicker placeholder="选择日期" name="date" /></div>            
+            <div className="info"><label>检测日期：</label><input type="hidden" name="date" value={dateValue ? dateValue.format('YYYY-MM-DD') : ''}/><DatePicker placeholder="选择日期" value={dateValue} onChange={this.onDateChange} /></div>            
             <div className="info"><label>车辆品牌：</label><Input  name="brand"/></div>
             <div className="info"><label>发动机型号：</label><Input name="motor"/></div>
             <div className="info"><label>大架号位置：</label><Input name="bignum"/></div>
             <div className="info"><label>OB位置：</label><Input name="obposition" /></div>
             <div className="btnbox">
-              <Button type="primary" onClick={this.savedate}>保存</Button>
-              <Button type="danger" icon="search">搜索</Button>
+              <Button type="primary" onClick={this.onSave}>保存</Button>
+              <Button type="danger" icon="search" onClick={this.onSearch}>搜索</Button>
             </div>
-          </Form>
+          </form>
         </div>
         <div className="serchresult">
         <h2 className="resulttitle">查询结果</h2>
-        <EditableTable />
+        <EditableTable data={data} pagination={{ current: page.cur, total: page.total, pageSize: page.size }} onChange={this.onTabeChange} />
         </div>
       </div>
     );
