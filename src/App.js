@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
-import { Input, Button, Table, DatePicker, Modal, message} from "antd";
+import { Input, Button, Table, DatePicker, Popconfirm, message} from "antd";
 import moment from 'moment';
+import locale from 'antd/lib/date-picker/locale/zh_CN';
 import './App.css';
 
 const { ipcRenderer } = window.electron;
@@ -53,7 +54,7 @@ class EditableCell extends React.Component {
             <div>
               {
               this.props.isDate
-              ? <DatePicker placeholder="选择日期" value={ value ? moment(value) : null } onChange={this.handleDateChange} />
+              ? <DatePicker placeholder="选择日期" locale={locale} value={ value ? moment(value) : null } onChange={this.handleDateChange} />
               : <Input
                 value={value}
                 onChange={e => this.handleChange(e)}
@@ -69,6 +70,36 @@ class EditableCell extends React.Component {
     );
   }
 }
+
+const dataDeform = (data = []) => {    
+  return data.map((item) => {
+    const res = {};
+    for (const key in item) {
+      if (key === 'id') {
+        res.key = item[key];
+      } else {
+        res[key] = {
+          editable: false,
+          value: item[key],
+        }
+      }
+    }
+    return res;
+  });
+};
+
+const dataTranform = (data) => {    
+  const res = {};
+  for (const key in data) {
+    if (key === 'key') {
+      res.id = data[key];
+    } else {
+      res[key] = data[key].value;
+    }
+  }
+  return res;
+};
+
 
 class EditableTable extends React.Component {
   constructor(props) {
@@ -89,12 +120,12 @@ class EditableTable extends React.Component {
   columns = [{
     title: '检测日期',
     dataIndex: 'date',
-    width: '10%',
+    width: '12%',
     render: this.renderColumnsFn('date'),
   }, {
     title: '车主姓名',
     dataIndex: 'username',
-    width: '10%',
+    width: '8%',
     render: this.renderColumnsFn('username'),
   }, {
     title: '车主地址',
@@ -137,12 +168,15 @@ class EditableTable extends React.Component {
           {
             editable ?
               <span>
-                <a onClick={() => this.editDone(index, 'save')}>保存</a>
-                <a onClick={() => this.editDone(index, 'cancel')}>取消</a>
+                <a href onClick={() => this.editDone(index, 'save')} className="row-oper">保存</a>
+                <a href onClick={() => this.editDone(index, 'cancel')} className="row-oper">取消</a>
               </span>
               :
               <span>
-                <a onClick={() => this.edit(index)}>修改</a>
+                <a href onClick={() => this.edit(index)} className="row-oper">修改</a>
+                <Popconfirm title="确定删除这条数据？" okText="确定" cancelText="取消" onConfirm={() => this.delete(index)}>
+                  <a href className="row-oper row-del">删除</a>
+                </Popconfirm>
               </span>
           }
         </div>
@@ -180,6 +214,12 @@ class EditableTable extends React.Component {
     this.setState({ data });
   }
 
+  delete(index) {
+    if (ipcRenderer) {
+      ipcRenderer.send('delete-data', this.state.data[index].key);
+    }
+  }
+
   editDone(index, type) {
     const { data } = this.state;
     Object.keys(data[index]).forEach((item) => {
@@ -189,6 +229,12 @@ class EditableTable extends React.Component {
       }
     });
     this.setState({ data }, () => {
+      if (type === 'save') {
+        if (ipcRenderer) {
+          ipcRenderer.send('update-data', dataTranform(data[index]));
+        }
+      }
+
       Object.keys(data[index]).forEach((item) => {
         if (data[index][item] && typeof data[index][item].editable !== 'undefined') {
           delete data[index][item].status;
@@ -213,28 +259,21 @@ class EditableTable extends React.Component {
 
 class App extends Component {
   pageDefault = { cur: 1, size: 10, total: 0 }
+  formDataDefault = {
+    username: '',
+    tel: '',
+    address: '',
+    date: null,
+    brand: '',
+    motor: '',
+    bignum: '',
+    obposition: '',
+  }
 
   state = {
     data: [],
     page: { ...this.pageDefault },
-    dateValue: null,
-  }
-
-  dataDeform(data = []) {    
-    return data.map((item) => {
-      const res = {};
-      for (const key in item) {
-        if (key === 'id') {
-          res.key = item[key];
-        } else {
-          res[key] = {
-            editable: false,
-            value: item[key],
-          }
-        }
-      }
-      return res;
-    });
+    formData: { ...this.formDataDefault }
   }
 
   componentDidMount() {
@@ -245,14 +284,24 @@ class App extends Component {
       // 接受主进程返回数据
       ipcRenderer.on('save-data', (event, arg) => {
         message.success('保存成功');
+        ipcRenderer.send('query-data', { page: this.pageDefault });
+      });
+
+      ipcRenderer.on('update-data', (event, arg) => {
+        message.success('更新数据成功');
         ipcRenderer.send('query-data', { page: this.state.page });
+      });
+
+      ipcRenderer.on('delete-data', (event, arg) => {
+        message.success('删除成功');
+        ipcRenderer.send('query-data', { page: this.pageDefault });
       });
 
       // 接受主进程返回数据
       ipcRenderer.on('query-data', (event, arg) => {
           if (arg) {
             this.setState({
-              data: this.dataDeform(arg.data),
+              data: dataDeform(arg.data),
               page: arg.page,
             })
           } else {
@@ -266,17 +315,26 @@ class App extends Component {
   }
 
   getFormData() {
-    const form = document.getElementById("form");
-    const formdata = new FormData(form);
-    const data = {};
-    for (const key of formdata.keys()) {
-      data[key] = formdata.get(key);
+    const data = {...this.state.formData};
+    if (data.date) {
+      data.date = data.date.format("YYYY-MM-DD");
     }
     return data;
   }
 
   onSave = () => {
     const data = this.getFormData();
+    let edit = false;
+    for (const key in data) {
+      if(data[key] && key !== 'date') {
+        edit = true;
+        break;
+      }
+    }
+    if (!edit) {
+      message.warn('请输入数据');
+      return;
+    }
     if (ipcRenderer) {
       // 发送数据到主进程
       ipcRenderer.send('save-data', data);
@@ -290,7 +348,6 @@ class App extends Component {
   search = (page) => {
     const data = this.getFormData();
     if (ipcRenderer) {
-            // 发送数据到主进程
       ipcRenderer.send('query-data', { page: page ? page : this.pageDefault, data });
     }
   }
@@ -306,12 +363,30 @@ class App extends Component {
 
   onDateChange = (moment, dateString) => {
     this.setState({
-      dateValue: moment,
+      formData: {
+        ...this.state.formData,
+        date: moment,
+      },
     });
   }
 
+  onFormChange = (key, e) => {
+    this.setState({
+      formData: {
+        ...this.state.formData,
+        [key]: e.target.value,
+      },
+    });
+  }
+
+  onReset = () => {
+    this.setState({
+      formData: { ...this.formDataDefault }
+    })
+  }
+
   render() {
-    const { data, page, dateValue } = this.state;
+    const { data, page, formData} = this.state;
 
     return (
       <div className="App">
@@ -319,16 +394,17 @@ class App extends Component {
         <div className="infobox">
           <h2 className="infotitle">用户信息搜索/存储</h2>
           <form id="form">
-            <div className="info"><label>车主姓名：</label><Input name="username" /></div>
-            <div className="info"><label>联系电话：</label><Input name="tel"/></div>
-            <div className="info"><label>车主地址：</label><Input name="address"/></div>
-            <div className="info"><label>检测日期：</label><input type="hidden" name="date" value={dateValue ? dateValue.format('YYYY-MM-DD') : ''}/><DatePicker placeholder="选择日期" value={dateValue} onChange={this.onDateChange} /></div>            
-            <div className="info"><label>车辆品牌：</label><Input  name="brand"/></div>
-            <div className="info"><label>发动机型号：</label><Input name="motor"/></div>
-            <div className="info"><label>大架号位置：</label><Input name="bignum"/></div>
-            <div className="info"><label>OB位置：</label><Input name="obposition" /></div>
+            <div className="info"><label>车主姓名：</label><Input value={formData.username} onChange={(e) => this.onFormChange('username', e)} /></div>
+            <div className="info"><label>联系电话：</label><Input value={formData.tel} onChange={(e) => this.onFormChange('tel', e)} /></div>
+            <div className="info"><label>车主地址：</label><Input value={formData.address} onChange={(e) => this.onFormChange('address', e)} /></div>
+            <div className="info"><label>检测日期：</label><DatePicker placeholder="选择日期" value={formData.date} onChange={this.onDateChange} locale={locale} /></div>            
+            <div className="info"><label>车辆品牌：</label><Input value={formData.brand} onChange={(e) => this.onFormChange('brand', e)} /></div>
+            <div className="info"><label>发动机型号：</label><Input value={formData.motor} onChange={(e) => this.onFormChange('motor', e)} /></div>
+            <div className="info"><label>大架号位置：</label><Input value={formData.bignum} onChange={(e) => this.onFormChange('bignum', e)} /></div>
+            <div className="info"><label>OB位置：</label><Input value={formData.obposition} onChange={(e) => this.onFormChange('obposition', e)} /></div>
             <div className="btnbox">
               <Button type="primary" onClick={this.onSave}>保存</Button>
+              <Button htmlType="reset" onClick={this.onReset}>重置</Button>
               <Button type="danger" icon="search" onClick={this.onSearch}>搜索</Button>
             </div>
           </form>

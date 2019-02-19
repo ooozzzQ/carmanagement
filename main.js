@@ -15,7 +15,8 @@ db.run(`CREATE TABLE IF NOT EXISTS carmanage (
   brand TEXT, -- 车辆品牌
   motor TEXT,  -- 发动机型号
   bignum TEXT, -- 大架号位置
-  obposition TEXT -- OB位置
+  obposition TEXT, -- OB位置
+  is_delete INTEGER DEFAULT 0 -- 是否被删除
 )`);
 
 // 主进程收到保存数据事件
@@ -31,24 +32,24 @@ ipcMain.on('save-data', (event, arg) => {
           bignum,
           obposition
         ) VALUES (
-          $d1,
-          $d2,
-          $d3,
-          $d4,
-          $d5,
-          $d6,
-          $d7,
-          $d8
+          $username,
+          $tel,
+          $address,
+          $date,
+          $brand,
+          $motor,
+          $bignum,
+          $obposition
         )`, // sql
         { 
-          $d1: arg.username,
-          $d2: arg.tel,
-          $d3: arg.address,
-          $d4: new Date(arg.date).getTime(),
-          $d5: arg.brand,
-          $d6: arg.motor,
-          $d7: arg.bignum,
-          $d8: arg.obposition,
+          $username: arg.username,
+          $tel: arg.tel,
+          $address: arg.address,
+          $date: new Date(arg.date).getTime(),
+          $brand: arg.brand,
+          $motor: arg.motor,
+          $bignum: arg.bignum,
+          $obposition: arg.obposition,
         }, // 参数
         (err, res) => { // 异步处理函数
             if (err) {
@@ -81,18 +82,19 @@ ipcMain.on('query-data', (event, { page, data = [] }) => {
       }
     }
     const { size, cur } = page;
-    const getCountSql = `select count(*) as total from carmanage ${ wheres.length ? 'where '+wheres.join(' and ') : ''}`;
+    const getCountSql = `select count(*) as total from carmanage where ${ wheres.length ? wheres.join(' and ') + ' and' : ''} is_delete = 0`;
     
     db.get(
       getCountSql,
       params,
-      (err, { total = 0 }) => {
+      (err, data = {}) => {
+        const { total = 0 } = data;
         if (err) {
             console.error(err);
             return;
         }
         
-        const queryAllSql = `select * from carmanage ${ wheres.length ? 'where '+wheres.join(' and ') : ''} limit ${size} offset ${(cur - 1) * size}`;
+        const queryAllSql = `select * from carmanage where ${ wheres.length ? wheres.join(' and ') + ' and' : ''} is_delete = 0 limit ${size} offset ${(cur - 1) * size}`;
 
         db.all(
           queryAllSql,
@@ -110,13 +112,55 @@ ipcMain.on('query-data', (event, { page, data = [] }) => {
     )
 });
 
+ipcMain.on('update-data', (event, data) => {
+  const updata = {};
+  const sets = [];
+
+  Object.keys(data).forEach((key) => {
+    if (key !== 'is_delete') {
+      updata[`$${key}`] = data[key];
+      if (key !== 'id') {
+        sets.push(`${key} = $${key}`);
+      }
+    }
+  });
+
+  db.run(
+    `UPDATE carmanage SET ${sets.join(', ')} WHERE id = $id and is_delete = 0`, 
+    updata,
+    (err, res) => {
+      if (err) {
+          console.error(err);
+          return;
+      }
+      event.sender.send('update-data', { code: 200, message: '更新数据成功', data: res });
+    }
+  );
+});
+
+ipcMain.on('delete-data', (event, id) => {
+  db.run(
+    `UPDATE carmanage SET is_delete = 1 WHERE id = $id`, 
+    {
+      $id: id
+    },
+    (err, res) => {
+      if (err) {
+          console.error(err);
+          return;
+      }
+      event.sender.send('delete-data', { code: 200, message: '删除数据成功', data: res });
+    }
+  );
+});
+
 
 let mainWindow
 
 function createWindow() {
     mainWindow = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1260,
+        height: 800,
         webPreferences: {
             nodeIntegration: true,
         }
@@ -129,7 +173,7 @@ function createWindow() {
     });
 
     // 打开控制台
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    // mainWindow.webContents.openDevTools({ mode: 'detach' });
 }
 
 app.on('ready', createWindow);

@@ -25,10 +25,10 @@ header {
 .ant-input {
     width: 70%;
 }
-.ant-calendar-picker {
+.info .ant-calendar-picker {
     width: 70%;
 }
-.ant-calendar-picker .ant-input {
+.info .ant-calendar-picker .ant-input {
     width: 100%;
 }
 .btnbox .ant-btn {
@@ -50,4 +50,12 @@ header {
 }
 .ant-table-tbody>tr>td .ant-input {
     width: 100%;
+}
+
+.row-oper {
+    margin: 8px;
+}
+
+.row-del {
+    color: #f5222d;
 }
