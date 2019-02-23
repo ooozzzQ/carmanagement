@@ -289,7 +289,10 @@ class App extends Component {
 
       ipcRenderer.on('update-data', (event, arg) => {
         message.success('更新数据成功');
-        ipcRenderer.send('query-data', { page: this.state.page });
+        ipcRenderer.send('query-data', {
+            data: this.state.formData,
+            page: this.state.page,
+        });
       });
 
       ipcRenderer.on('delete-data', (event, arg) => {

@@ -1,0 +1,20 @@
+{
+    "productName":"carmg",
+    "appId": "com.xxx.xxxxx",
+    "copyright":"xxxx",
+    "directories": {
+        "output": "dist",
+        "app": "build"
+    }, 
+    "win": {  
+        "target": [
+            {
+                "target": "nsis"
+            }
+        ]
+    },
+    "extends": null,
+    "npmRebuild": false,
+    "asar": false
+}
+  
